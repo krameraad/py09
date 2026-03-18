@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Self
 from enum import Enum, auto
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
 from data_generator import CrewMissionGenerator, DataConfig
 
@@ -39,18 +39,22 @@ class SpaceMission(BaseModel):
     def check(self) -> Self:
         if self.mission_id[0] != 'M':
             raise ValueError("Mission ID doesn't start with 'M'.")
+
         if not [x for x in self.crew
                 if x.rank == Rank.captain or x.rank == Rank.commander]:
             raise ValueError(
                 "Missing at least one captain or commander.")
+
         if self.duration_days > 365:
             experienced_crew = [x for x in self.crew
                                 if x.years_experience >= 5]
             if len(experienced_crew) / len(self.crew) < 0.5:
                 raise ValueError("Not enough experienced crew "
                                  "(5+ years, threshold 50%).")
-        if not [x for x in self.crew if x.is_active]:
+
+        if [x for x in self.crew if not x.is_active]:
             raise ValueError("Not all crew members are active.")
+
         return self
 
 
@@ -79,19 +83,49 @@ def main() -> None:
     for mission in missions:
         for crewmember in mission["crew"]:
             crewmember["rank"] = Rank[crewmember["rank"]]
-
-            # Messing with the ranks: no captains or commanders in any crew.
-            # if crewmember["rank"] == Rank.captain \
-            #         or crewmember["rank"] == Rank.commander:
-            #     crewmember["rank"] = Rank.cadet
-
-            # Messing with crewmember data:
-            # crewmember["age"] = 12
-        # try:
         mission["crew"] = [CrewMember(**x) for x in mission["crew"]]
-        # except ValidationError:
-        #     print("Crew member not valid.")
         print_mission(SpaceMission(**mission))
+
+    try:  # Specific report
+        crew: list[CrewMember] = []
+        crew.append(CrewMember(
+            member_id="kaas",
+            name="Sarah Connor",
+            rank=Rank.commander,
+            age=30,
+            specialization="Mission Command",
+            years_experience=20,
+            # is_active=False
+        ))
+        crew.append(CrewMember(
+            member_id="kaas",
+            name="John Smith",
+            rank=Rank.lieutenant,
+            age=30,
+            specialization="Navigation",
+            years_experience=20,
+            # is_active=False
+        ))
+        crew.append(CrewMember(
+            member_id="kaas",
+            name="Alice Johnson",
+            rank=Rank.officer,
+            age=30,
+            specialization="Engineering",
+            years_experience=20,
+            # is_active=False
+        ))
+        m = SpaceMission(
+            mission_id="M2024_MARS",
+            mission_name="Mars Colony Establishment",
+            destination="Mars",
+            launch_date="2024-01-01",
+            duration_days=900,
+            crew=crew,
+            budget_millions=2500.0)
+        print_mission(m)
+    except ValidationError as e:
+        print(e)
 
 
 if __name__ == "__main__":
