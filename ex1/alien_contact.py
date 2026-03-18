@@ -42,7 +42,7 @@ class AlienContact(BaseModel):
 def main() -> None:
     def print_contact(contact: AlienContact):
         print("Alien Contact Log Validation\n"
-              "-----------------------------")
+              "----------------------------")
         print(
             f"ID: {contact.contact_id}\n"
             f"Type: {contact.contact_type.name}\n"
@@ -60,8 +60,7 @@ def main() -> None:
     contacts = AlienContactGenerator(DataConfig()).generate_contact_data()
 
     for contact in contacts:
-        new_contact_type = ContactType[contact["contact_type"]]
-        contact.update({"contact_type": new_contact_type})
+        contact["contact_type"] = ContactType[contact["contact_type"]]
         print_contact(AlienContact(**contact))
 
     try:  # Valid report
